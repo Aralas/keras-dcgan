@@ -141,30 +141,30 @@ class DCGAN():
 
         for epoch in range(epochs):
             print("Epoch is", epoch)
-            for batch in range(batch_num):
-                # ---------------------
-                #  Train Discriminator
-                # ---------------------
-                noise = np.random.normal(0, 1, size=(self.batch_size, self.code_dim))
-                x_from_generator = self.generator.predict(noise)
-                x_true = next(data_generator)
-                x = np.concatenate((x_true, x_from_generator))
-                y = [1] * x_true.shape[0] + [0] * self.batch_size
-                d_loss = self.discriminator.train_on_batch(x, y)
-
-                # ---------------------
-                #  Train Generator
-                # ---------------------
-                noise = np.random.normal(0, 1, size=(self.batch_size, self.code_dim))
-                self.discriminator.trainable = False
-                g_loss = g_plus_d.train_on_batch(noise, [1] * self.batch_size)
-                self.discriminator.trainable = True
-                print("batch: ", batch, "/", batch_num, ", d_loss: ", d_loss[0], ", g_loss: ", g_loss[0])
+            # for batch in range(batch_num):
+            #     # ---------------------
+            #     #  Train Discriminator
+            #     # ---------------------
+            #     noise = np.random.uniform(-1, 1, size=(self.batch_size, self.code_dim))
+            #     x_from_generator = self.generator.predict(noise)
+            #     x_true = next(data_generator)
+            #     x = np.concatenate((x_true, x_from_generator))
+            #     y = [1] * x_true.shape[0] + [0] * self.batch_size
+            #     d_loss = self.discriminator.train_on_batch(x, y)
+            #
+            #     # ---------------------
+            #     #  Train Generator
+            #     # ---------------------
+            #     noise = np.random.normal(0, 1, size=(self.batch_size, self.code_dim))
+            #     self.discriminator.trainable = False
+            #     g_loss = g_plus_d.train_on_batch(noise, [1] * self.batch_size)
+            #     self.discriminator.trainable = True
+            #     print("batch: ", batch, "/", batch_num, ", d_loss: ", d_loss[0], ", g_loss: ", g_loss[0])
 
             # ---------------------
             #  Save Images
             # ---------------------
-            noise = np.random.normal(0, 1, size=(10 * 10, self.code_dim))
+            noise = np.random.uniform(-1, 1, size=(10 * 10, self.code_dim))
             images = self.generator.predict(noise)
             images = (images + 1) * 127.5
             fig, axs = plt.subplots(10, 10)
@@ -172,7 +172,7 @@ class DCGAN():
             for i in range(10):
                 for j in range(10):
                     if self.dataset == 'MNIST':
-                        axs[i, j].imshow(images[cnt, :, :, :], cmap='gray')
+                        axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
                     else:
                         axs[i, j].imshow(images[cnt, :, :, :])
                     axs[i, j].axis('off')
