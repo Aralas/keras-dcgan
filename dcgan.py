@@ -171,9 +171,9 @@ class DCGAN():
             for i in range(10):
                 for j in range(10):
                     if self.dataset == 'MNIST':
-                        axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
+                        axs[i, j].imshow(images[cnt, :, :, :], cmap='gray')
                     else:
-                        axs[i, j].imshow(images[cnt, :, :, 0])
+                        axs[i, j].imshow(images[cnt, :, :, :])
                     axs[i, j].axis('off')
                     cnt += 1
             fig.savefig('images/' + self.dataset + '_epoch_' + str(epoch) + '.png')
