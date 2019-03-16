@@ -31,7 +31,6 @@ elif dataset == 'CIFAR10':
     data_object = DP.CIFAR10()
 
 x_train, y_train, x_test, y_test = data_object.x_train, data_object.y_train, data_object.x_test, data_object.y_test
-x_train = x_train[0:1000, :, :, :]
 model_object = DCGAN(dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
 
 model_object.train(x_train, epochs)
