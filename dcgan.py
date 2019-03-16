@@ -11,6 +11,8 @@ from keras.optimizers import Adam
 import tensorflow as tf
 import numpy as np
 import math
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import os
 
@@ -168,7 +170,10 @@ class DCGAN():
             cnt = 0
             for i in range(10):
                 for j in range(10):
-                    axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
+                    if self.dataset == 'MNIST':
+                        axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
+                    else:
+                        axs[i, j].imshow(images[cnt, :, :, 0])
                     axs[i, j].axis('off')
                     cnt += 1
             fig.savefig('images/' + self.dataset + '_epoch_' + str(epoch) + '.png')
