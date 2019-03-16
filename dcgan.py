@@ -155,6 +155,7 @@ class DCGAN():
                 # ---------------------
                 #  Train Generator
                 # ---------------------
+                noise = np.random.normal(0, 1, size=(self.batch_size, self.code_dim))
                 self.discriminator.trainable = False
                 g_loss = g_plus_d.train_on_batch(noise, [1] * self.batch_size)
                 self.discriminator.trainable = True
