@@ -48,7 +48,7 @@ class DCGAN():
             image_channel = 1
         elif self.dataset == 'CIFAR10':
             image_row = 32
-            image_row = 32
+            image_column = 32
             image_channel = 3
         else:
             print('this is an undefined dataset')
