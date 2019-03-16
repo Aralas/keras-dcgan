@@ -1,162 +1,181 @@
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Reshape
-from keras.layers.core import Activation
+from keras import backend as K
+from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import UpSampling2D
-from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.layers.convolutional import Conv2D
 from keras.layers.core import Flatten
-from keras.optimizers import SGD
-from keras.datasets import mnist
+from keras.optimizers import Adam
+import tensorflow as tf
 import numpy as np
-from PIL import Image
-import argparse
 import math
+import matplotlib.pyplot as plt
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
+K.set_session(sess)
 
 
-def generator_model():
-    model = Sequential()
-    model.add(Dense(input_dim=100, output_dim=1024))
-    model.add(Activation('tanh'))
-    model.add(Dense(128*7*7))
-    model.add(BatchNormalization())
-    model.add(Activation('tanh'))
-    model.add(Reshape((7, 7, 128), input_shape=(128*7*7,)))
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Conv2D(64, (5, 5), padding='same'))
-    model.add(Activation('tanh'))
-    model.add(UpSampling2D(size=(2, 2)))
-    model.add(Conv2D(1, (5, 5), padding='same'))
-    model.add(Activation('tanh'))
-    return model
+class DCGAN():
 
+    def __init__(self, dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size):
+        self.dataset = dataset
+        self.generator_arch = generator_arch
+        self.discriminator_arch = discriminator_arch
+        self.encoder_arch = encoder_arch
 
-def discriminator_model():
-    model = Sequential()
-    model.add(
-            Conv2D(64, (5, 5),
-            padding='same',
-            input_shape=(28, 28, 1))
-            )
-    model.add(Activation('tanh'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Conv2D(128, (5, 5)))
-    model.add(Activation('tanh'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(1024))
-    model.add(Activation('tanh'))
-    model.add(Dense(1))
-    model.add(Activation('sigmoid'))
-    return model
+        self.image_row, self.image_column, self.image_channel = self.init_dataset_attribute()
+        self.image_shape = (self.image_row, self.image_column, self.image_channel)
+        self.code_dim = 100
+        self.kernel_size = (5, 5)
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.optimizer = Adam(lr=self.learning_rate)
 
+        self.generator = self.generator_model()
+        self.discriminator = self.discriminator_model()
+        self.encoder = self.encoder_model()
 
-def generator_containing_discriminator(g, d):
-    model = Sequential()
-    model.add(g)
-    d.trainable = False
-    model.add(d)
-    return model
+    def init_dataset_attribute(self):
+        if self.dataset == 'MNIST':
+            image_row = 28
+            image_column = 28
+            image_channel = 1
+        elif self.dataset == 'CIFAR10':
+            image_row = 32
+            image_row = 32
+            image_channel = 3
+        else:
+            print('this is an undefined dataset')
+        return image_row, image_column, image_channel
 
+    def data_generator(self, x, batch_size):
+        idx = np.arange(len(x))
+        while True:
+            np.random.shuffle(idx)
+            batches = [idx[range(batch_size * i, min(len(x), batch_size * (i + 1)))] for i in
+                       range(math.ceil(len(x) / batch_size))]
+            for index in batches:
+                yield x[index]
 
-def combine_images(generated_images):
-    num = generated_images.shape[0]
-    width = int(math.sqrt(num))
-    height = int(math.ceil(float(num)/width))
-    shape = generated_images.shape[1:3]
-    image = np.zeros((height*shape[0], width*shape[1]),
-                     dtype=generated_images.dtype)
-    for index, img in enumerate(generated_images):
-        i = int(index/width)
-        j = index % width
-        image[i*shape[0]:(i+1)*shape[0], j*shape[1]:(j+1)*shape[1]] = \
-            img[:, :, 0]
-    return image
+    def generator_model(self):
+        architecture = self.generator_arch
+        if self.image_row % np.power(2, len(architecture)) != 0:
+            print('invalid architecture')
+            return
+        dim1 = self.image_row // np.power(2, len(architecture))
+        model = Sequential()
+        for layer_index in range(len(architecture)):
+            filter_num = architecture[layer_index]
+            if layer_index == 0:
+                model.add(Dense(input_dim=self.code_dim, output_dim=dim1 * dim1 * filter_num, activation='relu'))
+                model.add(BatchNormalization(momentum=0.8))
+                model.add(Reshape((dim1, dim1, filter_num)))
+                model.add(UpSampling2D(size=(2, 2)))
+            else:
+                model.add(Conv2D(filter_num, kernel_size=self.kernel_size, kernel_initializer='glorot_normal',
+                                 padding='same', activation='relu'))
+                model.add(BatchNormalization(momentum=0.8))
+                model.add(UpSampling2D(size=(2, 2)))
+        model.add(Conv2D(self.image_channel, self.kernel_size, kernel_initializer='glorot_normal', padding='same',
+                         activation='tanh'))
+        return model
 
+    def discriminator_model(self):
+        model = Sequential()
+        architecure = self.discriminator_arch
+        for layer_index in range(len(architecure)):
+            layer = architecure[layer_index]
+            if len(layer) != 2:
+                print('invalid architecuture')
+                return
+            if layer_index == 0:
+                model.add(Conv2D(layer[0], kernel_size=self.kernel_size, input_shape=self.image_shape,
+                                 strides=layer[1], kernel_initializer='glorot_normal', padding='same'))
+            else:
+                model.add(Conv2D(layer[0], kernel_size=self.kernel_size, strides=layer[1],
+                                 kernel_initializer='glorot_normal', padding='same'))
+            model.add(LeakyReLU(alpha=0.2))
+            model.add(BatchNormalization(momentum=0.8))
+        model.add(Flatten())
+        model.add(Dense(1, activation='sigmoid'))
+        return model
 
-def train(BATCH_SIZE):
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
-    X_train = (X_train.astype(np.float32) - 127.5)/127.5
-    X_train = X_train[:, :, :, None]
-    X_test = X_test[:, :, :, None]
-    # X_train = X_train.reshape((X_train.shape, 1) + X_train.shape[1:])
-    d = discriminator_model()
-    g = generator_model()
-    d_on_g = generator_containing_discriminator(g, d)
-    d_optim = SGD(lr=0.0005, momentum=0.9, nesterov=True)
-    g_optim = SGD(lr=0.0005, momentum=0.9, nesterov=True)
-    g.compile(loss='binary_crossentropy', optimizer="SGD")
-    d_on_g.compile(loss='binary_crossentropy', optimizer=g_optim)
-    d.trainable = True
-    d.compile(loss='binary_crossentropy', optimizer=d_optim)
-    for epoch in range(100):
-        print("Epoch is", epoch)
-        print("Number of batches", int(X_train.shape[0]/BATCH_SIZE))
-        for index in range(int(X_train.shape[0]/BATCH_SIZE)):
-            noise = np.random.uniform(-1, 1, size=(BATCH_SIZE, 100))
-            image_batch = X_train[index*BATCH_SIZE:(index+1)*BATCH_SIZE]
-            generated_images = g.predict(noise, verbose=0)
-            if index % 20 == 0:
-                image = combine_images(generated_images)
-                image = image*127.5+127.5
-                Image.fromarray(image.astype(np.uint8)).save(
-                    str(epoch)+"_"+str(index)+".png")
-            X = np.concatenate((image_batch, generated_images))
-            y = [1] * BATCH_SIZE + [0] * BATCH_SIZE
-            d_loss = d.train_on_batch(X, y)
-            print("batch %d d_loss : %f" % (index, d_loss))
-            noise = np.random.uniform(-1, 1, (BATCH_SIZE, 100))
-            d.trainable = False
-            g_loss = d_on_g.train_on_batch(noise, [1] * BATCH_SIZE)
-            d.trainable = True
-            print("batch %d g_loss : %f" % (index, g_loss))
-            if index % 10 == 9:
-                g.save_weights('generator', True)
-                d.save_weights('discriminator', True)
+    def encoder_model(self):
+        model = Sequential()
+        return model
 
+    def generator_containing_discriminator(self):
+        model = Sequential()
+        model.add(self.generator)
+        self.discriminator.trainable = False
+        model.add(self.discriminator)
+        return model
 
-def generate(BATCH_SIZE, nice=False):
-    g = generator_model()
-    g.compile(loss='binary_crossentropy', optimizer="SGD")
-    g.load_weights('generator')
-    if nice:
-        d = discriminator_model()
-        d.compile(loss='binary_crossentropy', optimizer="SGD")
-        d.load_weights('discriminator')
-        noise = np.random.uniform(-1, 1, (BATCH_SIZE*20, 100))
-        generated_images = g.predict(noise, verbose=1)
-        d_pret = d.predict(generated_images, verbose=1)
-        index = np.arange(0, BATCH_SIZE*20)
-        index.resize((BATCH_SIZE*20, 1))
-        pre_with_index = list(np.append(d_pret, index, axis=1))
-        pre_with_index.sort(key=lambda x: x[0], reverse=True)
-        nice_images = np.zeros((BATCH_SIZE,) + generated_images.shape[1:3], dtype=np.float32)
-        nice_images = nice_images[:, :, :, None]
-        for i in range(BATCH_SIZE):
-            idx = int(pre_with_index[i][1])
-            nice_images[i, :, :, 0] = generated_images[idx, :, :, 0]
-        image = combine_images(nice_images)
-    else:
-        noise = np.random.uniform(-1, 1, (BATCH_SIZE, 100))
-        generated_images = g.predict(noise, verbose=1)
-        image = combine_images(generated_images)
-    image = image*127.5+127.5
-    Image.fromarray(image.astype(np.uint8)).save(
-        "generated_image.png")
+    def encoder_containing_generator(self):
+        model = Sequential()
+        model.add(self.encoder)
+        self.generator.trainable = False
+        model.add(self.generator)
+        return model
 
+    def train(self, x_train, epochs):
+        # d = self.discriminator
+        # g = self.generator
+        g_plus_d = self.generator_containing_discriminator()
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str)
-    parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--nice", dest="nice", action="store_true")
-    parser.set_defaults(nice=False)
-    args = parser.parse_args()
-    return args
+        self.generator.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['accuracy'])
+        g_plus_d.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['accuracy'])
+        self.discriminator.trainable = True
+        self.discriminator.compile(loss='binary_crossentropy', optimizer=self.optimizer, metrics=['accuracy'])
 
-if __name__ == "__main__":
-    args = get_args()
-    if args.mode == "train":
-        train(BATCH_SIZE=args.batch_size)
-    elif args.mode == "generate":
-        generate(BATCH_SIZE=args.batch_size, nice=args.nice)
+        batch_num = math.ceil(len(x_train) / self.batch_size)
+        data_generator = self.data_generator(x_train, self.batch_size)
+
+        for epoch in range(epochs):
+            print("Epoch is", epoch)
+            for batch in range(batch_num):
+                # ---------------------
+                #  Train Discriminator
+                # ---------------------
+                noise = np.random.normal(0, 1, size=(self.batch_size, self.code_dim))
+                x_from_generator = self.generator.predict(noise)
+                x_true = next(data_generator)
+                x = np.concatenate((x_true, x_from_generator))
+                y = [1] * x_true.shape[0] + [0] * self.batch_size
+                d_loss = self.discriminator.train_on_batch(x, y)
+
+                # ---------------------
+                #  Train Generator
+                # ---------------------
+                self.discriminator.trainable = False
+                g_loss = g_plus_d.train_on_batch(noise, [1] * self.batch_size)
+                self.discriminator.trainable = True
+                print("batch: ", batch, "/", batch_num, ", d_loss: ", d_loss[0], ", g_loss: ", g_loss[0])
+
+            # ---------------------
+            #  Save Images
+            # ---------------------
+            noise = np.random.normal(0, 1, size=(10 * 10, self.code_dim))
+            images = self.generator.predict(noise)
+            images = (images + 1) * 127.5
+            fig, axs = plt.subplots(10, 10)
+            cnt = 0
+            for i in range(10):
+                for j in range(10):
+                    axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
+                    axs[i, j].axis('off')
+                    cnt += 1
+            fig.savefig('images/' + self.dataset + '_epoch_' + str(epoch) + '.png')
+            plt.close()
+
+            # ---------------------
+            #  Save Models
+            # ---------------------
+            self.generator.save_weights('model/' + self.dataset + '_generator_epoch_' + str(epoch) + '.hs')
+            self.discriminator.save_weights('model/' + self.dataset + '_discriminator_epoch_' + str(epoch) + '.hs')
