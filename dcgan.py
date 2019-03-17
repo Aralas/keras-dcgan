@@ -27,13 +27,14 @@ K.set_session(sess)
 
 class DCGAN():
 
-    def __init__(self, dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size):
+    def __init__(self, dataset, label, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size):
         self.dataset = dataset
+        self.label = label
         self.generator_arch = generator_arch
         self.discriminator_arch = discriminator_arch
         self.encoder_arch = encoder_arch
 
-        self.image_row, self.image_column, self.image_channel = self.init_dataset_attribute()
+        self.image_row, self.image_column, self.image_channel, self.class_name = self.init_dataset_attribute()
         self.image_shape = (self.image_row, self.image_column, self.image_channel)
         self.code_dim = 100
         self.kernel_size = (5, 5)
@@ -47,16 +48,23 @@ class DCGAN():
 
     def init_dataset_attribute(self):
         if self.dataset == 'MNIST':
+            class_list = ['digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8',
+                          'digit9']
             image_row = 28
             image_column = 28
             image_channel = 1
         elif self.dataset == 'CIFAR10':
+            class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
             image_row = 32
             image_column = 32
             image_channel = 3
         else:
             print('this is an undefined dataset')
-        return image_row, image_column, image_channel
+        if self.label is None:
+            class_name = 'whole'
+        else:
+            class_name = class_list[self.label]
+        return image_row, image_column, image_channel, class_name
 
     def data_generator(self, x, batch_size):
         idx = np.arange(len(x))
@@ -190,7 +198,7 @@ class DCGAN():
                         axs[i, j].imshow(img)
                     axs[i, j].axis('off')
                     cnt += 1
-            dirs = 'images/random/' + self.dataset
+            dirs = 'images/random/' + self.dataset + '_' + self.class_name
             if not os.path.exists(dirs):
                 os.makedirs(dirs)
             fig.savefig(dirs + '/epoch_' + str(epoch) + '.png')
@@ -211,7 +219,7 @@ class DCGAN():
                         axs[i, j].imshow(img)
                     axs[i, j].axis('off')
                     cnt += 1
-            dirs = 'images/nice/' + self.dataset
+            dirs = 'images/nice/' + self.dataset + '_' + self.class_name
             if not os.path.exists(dirs):
                 os.makedirs(dirs)
             fig.savefig(dirs + '/epoch_' + str(epoch) + '.png')

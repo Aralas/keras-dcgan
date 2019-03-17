@@ -16,8 +16,10 @@ Parameters:
 """
 from dcgan import DCGAN
 import DataProcessing as DP
+import numpy as np
 
 dataset = 'MNIST'
+label = 0
 generator_arch = [128, 64]
 discriminator_arch = [[32, 2], [64, 2], [128, 2], [256, 1]]
 encoder_arch = []
@@ -31,23 +33,21 @@ elif dataset == 'CIFAR10':
     data_object = DP.CIFAR10()
 
 x_train, y_train, x_test, y_test = data_object.x_train, data_object.y_train, data_object.x_test, data_object.y_test
-model_object = DCGAN(dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
-
-model_object.train(x_train, epochs)
 
 
-# def combine_images(generated_images):
-#     num = generated_images.shape[0]
-#     width = int(math.sqrt(num))
-#     height = int(math.ceil(float(num) / width))
-#     shape = generated_images.shape[1:3]
-#     image = np.zeros((height * shape[0], width * shape[1]),
-#                      dtype=generated_images.dtype)
-#     for index, img in enumerate(generated_images):
-#         i = int(index / width)
-#         j = index % width
-#         image[i * shape[0]:(i + 1) * shape[0], j * shape[1]:(j + 1) * shape[1]] = \
-#             img[:, :, 0]
-#     return image
+def run_test():
+    model_object = DCGAN(dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
+
+    if label is None:
+        model_object.train(x_train, epochs)
+    else:
+        index = list(np.where(y_train[:, label] == 1)[0])
+        x_positive = x_train[index]
+        model_object.train(x_positive, epochs)
+
+
+for label in range(10):
+    run_test()
+
 
 
