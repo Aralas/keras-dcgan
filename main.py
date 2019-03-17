@@ -17,6 +17,15 @@ Parameters:
 from dcgan import DCGAN
 import DataProcessing as DP
 import numpy as np
+import tensorflow as tf
+from keras import backend as K
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+sess = tf.Session(config=config)
+K.set_session(sess)
 
 dataset = 'MNIST'
 label = 0
@@ -36,7 +45,7 @@ x_train, y_train, x_test, y_test = data_object.x_train, data_object.y_train, dat
 
 
 def run_test():
-    model_object = DCGAN(dataset, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
+    model_object = DCGAN(dataset, label, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
 
     if label is None:
         model_object.train(x_train, epochs)
