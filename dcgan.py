@@ -184,6 +184,7 @@ class DCGAN():
                         axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
                     else:
                         r, g, b = images[cnt, :, :, 0], images[cnt, :, :, 1], images[cnt, :, :, 2]
+                        r, g, b = Image.fromarray(r), Image.fromarray(g), Image.fromarray(b)
                         img = Image.merge('RGB', (r, g, b))
                         axs[i, j].imshow(img)
                     axs[i, j].axis('off')
@@ -202,8 +203,9 @@ class DCGAN():
                     if self.dataset == 'MNIST':
                         axs[i, j].imshow(images_nice[index_nice, :, :, 0], cmap='gray')
                     else:
-                        r, g, b = images_nice[index_nice, :, :, 0], images_nice[index_nice, :, :,
-                                                                                   1], images_nice[index_nice, :, :, 2]
+                        r, g, b = images_nice[index_nice, :, :, 0], \
+                                  images_nice[index_nice, :, :, 1], images_nice[index_nice, :, :, 2]
+                        r, g, b = Image.fromarray(r), Image.fromarray(g), Image.fromarray(b)
                         img = Image.merge('RGB', (r, g, b))
                         axs[i, j].imshow(img)
                     axs[i, j].axis('off')
