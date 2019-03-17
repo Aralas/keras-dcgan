@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
@@ -177,28 +177,41 @@ class DCGAN():
             d_pred_sort_index = np.argsort(-d_predict, axis=0).reshape(-1, )
 
             fig, axs = plt.subplots(10, 10)
-            fig_nice, axs_nice = plt.subplot(10, 10)
+            cnt = 0
+            for i in range(10):
+                for j in range(10):
+                    if self.dataset == 'MNIST':
+                        axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
+                    else:
+                        r, g, b = images[cnt, :, :, 0], images[cnt, :, :, 1], images[cnt, :, :, 2]
+                        img = Image.merge('RGB', (r, g, b))
+                        axs[i, j].imshow(img)
+                    axs[i, j].axis('off')
+                    cnt += 1
+            dirs = 'images/random/' + self.dataset
+            if not os.path.exists(dirs):
+                os.makedirs(dirs)
+            fig.savefig(dirs + '/epoch_' + str(epoch) + '.png')
+            plt.close()
+
+            fig, axs = plt.subplots(10, 10)
             cnt = 0
             for i in range(10):
                 for j in range(10):
                     index_nice = d_pred_sort_index[cnt]
                     if self.dataset == 'MNIST':
-                        axs[i, j].imshow(images[cnt, :, :, 0], cmap='gray')
-                        axs_nice[i, j].imshow(images_nice[index_nice, :, :, 0], cmap='gray')
+                        axs[i, j].imshow(images_nice[index_nice, :, :, 0], cmap='gray')
                     else:
-                        r, g, b = images[cnt, :, :, 0], images[cnt, :, :, 1], images[cnt, :, :, 2]
+                        r, g, b = images_nice[index_nice, :, :, 0], images_nice[index_nice, :, :,
+                                                                                   1], images_nice[index_nice, :, :, 2]
                         img = Image.merge('RGB', (r, g, b))
                         axs[i, j].imshow(img)
-
-                        r_nice, g_nice, b_nice = images_nice[index_nice, :, :, 0], images_nice[index_nice, :, :,
-                                                                                   1], images_nice[index_nice, :, :, 2]
-                        img_nice = Image.merge('RGB', (r_nice, g_nice, b_nice))
-                        axs_nice[i, j].imshow(img_nice)
                     axs[i, j].axis('off')
-                    axs_nice[i, j].axis('off')
                     cnt += 1
-            fig.savefig('images/random/' + self.dataset + '/epoch_' + str(epoch) + '.png')
-            fig_nice.savefig('images/nice/' + self.dataset + '/epoch_' + str(epoch) + '.png')
+            dirs = 'images/nice/' + self.dataset
+            if not os.path.exists(dirs):
+                os.makedirs(dirs)
+            fig.savefig(dirs + '/epoch_' + str(epoch) + '.png')
             plt.close()
 
             # ---------------------
