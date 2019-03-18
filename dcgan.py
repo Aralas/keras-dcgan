@@ -228,5 +228,5 @@ class DCGAN():
             # ---------------------
             #  Save Models
             # ---------------------
-            self.generator.save_weights('model/' + self.dataset + '_generator_epoch_' + str(epoch) + '.hs')
-            self.discriminator.save_weights('model/' + self.dataset + '_discriminator_epoch_' + str(epoch) + '.hs')
+            self.generator.save_weights('model/' + self.dataset + '_' + self.class_name + '_generator_epoch_' + str(epoch) + '.hs')
+            self.discriminator.save_weights('model/' + self.dataset + '_' + self.class_name + '_discriminator_epoch_' + str(epoch) + '.hs')
