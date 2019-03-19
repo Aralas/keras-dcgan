@@ -41,17 +41,22 @@ if dataset == 'MNIST':
 elif dataset == 'CIFAR10':
     data_object = DP.CIFAR10()
 
-x_train, y_train, x_test, y_test = data_object.x_train, data_object.y_train, data_object.x_test, data_object.y_test
+if label is None:
+    class_name = 'whole'
+else:
+    class_name = data_object.class_list[label]
+    
+x, y = data_object.x, data_object.y
 
 
 def run_test():
-    model_object = DCGAN(dataset, label, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
+    model_object = DCGAN(dataset, label, data_object.input_size, class_name, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size)
 
     if label is None:
-        model_object.train(x_train, epochs)
+        model_object.train(x, epochs)
     else:
-        index = list(np.where(y_train[:, label] == 1)[0])
-        x_positive = x_train[index]
+        index = list(np.where(y[:, label] == 1)[0])
+        x_positive = x[index]
         model_object.train(x_positive, epochs)
 
 

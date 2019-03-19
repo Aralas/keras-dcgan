@@ -27,15 +27,16 @@ K.set_session(sess)
 
 class DCGAN():
 
-    def __init__(self, dataset, label, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size):
+    def __init__(self, dataset, label, image_shape, class_name, generator_arch, discriminator_arch, encoder_arch, learning_rate, batch_size):
         self.dataset = dataset
         self.label = label
         self.generator_arch = generator_arch
         self.discriminator_arch = discriminator_arch
         self.encoder_arch = encoder_arch
 
-        self.image_row, self.image_column, self.image_channel, self.class_name = self.init_dataset_attribute()
-        self.image_shape = (self.image_row, self.image_column, self.image_channel)
+        self.image_shape = image_shape
+        self.class_name = class_name
+        self.image_row, self.image_column, self.image_channel = self.image_shape
         self.code_dim = 100
         self.kernel_size = (5, 5)
         self.learning_rate = learning_rate
@@ -45,26 +46,7 @@ class DCGAN():
         self.generator = self.generator_model()
         self.discriminator = self.discriminator_model()
         self.encoder = self.encoder_model()
-
-    def init_dataset_attribute(self):
-        if self.dataset == 'MNIST':
-            class_list = ['digit0', 'digit1', 'digit2', 'digit3', 'digit4', 'digit5', 'digit6', 'digit7', 'digit8',
-                          'digit9']
-            image_row = 28
-            image_column = 28
-            image_channel = 1
-        elif self.dataset == 'CIFAR10':
-            class_list = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-            image_row = 32
-            image_column = 32
-            image_channel = 3
-        else:
-            print('this is an undefined dataset')
-        if self.label is None:
-            class_name = 'whole'
-        else:
-            class_name = class_list[self.label]
-        return image_row, image_column, image_channel, class_name
+        
 
     def data_generator(self, x, batch_size):
         idx = np.arange(len(x))
@@ -228,5 +210,6 @@ class DCGAN():
             # ---------------------
             #  Save Models
             # ---------------------
-            self.generator.save_weights('model/' + self.dataset + '_' + self.class_name + '_generator_epoch_' + str(epoch) + '.hs')
-            self.discriminator.save_weights('model/' + self.dataset + '_' + self.class_name + '_discriminator_epoch_' + str(epoch) + '.hs')
+            if epoch % 50 == 49:
+                self.generator.save_weights('model/' + self.dataset + '_' + self.class_name + '_generator_epoch_' + str(epoch) + '.hs')
+                self.discriminator.save_weights('model/' + self.dataset + '_' + self.class_name + '_discriminator_epoch_' + str(epoch) + '.hs')
