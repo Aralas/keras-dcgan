@@ -59,15 +59,23 @@ class DCGAN():
 
     def generator_model(self):
         architecture = self.generator_arch
-        if self.image_row % np.power(2, len(architecture)) != 0:
+        fractor = np.power(2, len(architecture))
+        dim1 = self.image_row // fractor
+        dim2 = self.image_column // fractor
+        
+        if max(self.image_row % fractor, self.image_column % fractor) != 0:
             print('invalid architecture')
             return
-        dim1 = self.image_row // np.power(2, len(architecture))
+        
+        if min(dim1, dim2) < 4:
+            print('too many layers')
+            return
+        
         model = Sequential()
         for layer_index in range(len(architecture)):
             filter_num = architecture[layer_index]
             if layer_index == 0:
-                model.add(Dense(input_dim=self.code_dim, output_dim=dim1 * dim1 * filter_num, activation='relu'))
+                model.add(Dense(input_dim=self.code_dim, output_dim=dim1 * dim2 * filter_num, activation='relu'))
                 model.add(BatchNormalization(momentum=0.8))
                 model.add(Reshape((dim1, dim1, filter_num)))
                 model.add(UpSampling2D(size=(2, 2)))

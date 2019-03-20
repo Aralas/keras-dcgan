@@ -73,6 +73,14 @@ class celeba(object):
         self.class_list = None
 
     def load_data(self):
-        
+        list1 = os.listdir("./dataset/resized_celeba/")
+        n = len(list1)
+        x = np.zeros((n, self.img_rows, self.img_cols, 3))
+        y = None
+        for i in range(n):
+            imgName = os.path.basename(list1[i])
+            if (os.path.splitext(imgName)[1] != ".jpg"): continue
+            img = np.array(cv2.imread('dataset/img_align_celeba/' + imgName))
+            x[i, :, :, :] = img
         return x, y
 
